@@ -11,14 +11,6 @@ module.exports = {
     uri: process.env.REDIS_DATABASE_URI || 'redis://localhost:6379/0',
   },
 
-  mail: {
-    host: process.env.MAIL_SERVER || 'smtp.qq.com',
-    port: parseInt(process.env.MAIL_PORT || '465'),
-    secure: process.env.MAIL_USE_SSL !== 'false',
-    user: process.env.MAIL_USERNAME || '',
-    pass: process.env.MAIL_PASSWORD || '',
-  },
-
   ai: {
     siliconflowApiKey: process.env.SILICONFLOW_API_KEY || '',
     siliconflowBaseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
@@ -27,6 +19,4 @@ module.exports = {
     ocrApiUrl: process.env.OCR_API_URL || '',
     accessToken: process.env.ACCESS_TOKEN || '',
   },
-
-  devMode: process.env.DEVELOPMENT_MODE === 'true',
 };

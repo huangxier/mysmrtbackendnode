@@ -6,27 +6,25 @@ exports.addComment = async (req, res) => {
     const user_id = req.userId;
     const data = req.body;
 
-    // 必填字段校验
-    for (const field of ['id', 'document_id', 'text', 'selected_text']) {
+    // 1. 必填字段校验
+    for (const field of ['id', 'document_id', 'text']) {
       if (!(field in data))
         return res.status(400).json({ message: `缺少必要字段: ${field}`, code: '400' });
     }
 
-    // range 字段兼容两种格式：range_from/range_to 或 range.from/range.to
-    const range_from = data.range_from ?? data?.range?.from;
-    const range_to = data.range_to ?? data?.range?.to;
-    if (range_from == null || range_to == null)
-      return res.status(400).json({ message: '缺少必要字段: range_from/range_to 或 range.from/range.to', code: '400' });
+    const range_from = data.range_from ?? data?.range?.from ?? 0;
+    const range_to = data.range_to ?? data?.range?.to ?? 0;
 
     const doc = await Document.findByPk(data.document_id);
     if (!doc) return res.status(404).json({ message: '文档不存在', code: '404' });
 
+    // 2. 存储 UUID (data.id)
     const comment = await Comment.create({
-      id: data.id,
+      id: data.id, // 这里存储前端生成的 uuidv4
       document_id: data.document_id,
       user_id,
       text: data.text,
-      selected_text: data.selected_text,
+      selected_text: data.selected_text || '',
       range_from,
       range_to,
       created_at: new Date(),
@@ -34,6 +32,8 @@ exports.addComment = async (req, res) => {
     });
 
     const user = await User.findByPk(user_id);
+
+    // 3. 构造返回结构
     const result = {
       ...comment.toJSON(),
       range: { from: comment.range_from, to: comment.range_to },
@@ -77,16 +77,18 @@ exports.getDocumentComments = async (req, res) => {
 // DELETE /document/comment/:commentId
 exports.deleteComment = async (req, res) => {
   try {
+    // 这里的 commentId 现在是前端传来的 UUID 字符串
     const comment = await Comment.findByPk(req.params.commentId);
     if (!comment) return res.status(404).json({ message: '评论不存在', code: '404' });
 
-    // 只有评论作者或文档所有者可以删除
+    // 权限校验：只有评论作者或文档所有者可以删除
     if (comment.user_id !== req.userId) {
       const doc = await Document.findByPk(comment.document_id);
       if (!doc || doc.user_id !== req.userId)
         return res.status(403).json({ message: '无权删除此评论', code: '403' });
     }
 
+    // 执行逻辑删除（更新 is_deleted 状态）
     await comment.update({ is_deleted: true });
     res.json({ message: '评论删除成功', code: '200' });
   } catch (e) {

@@ -19,18 +19,21 @@ async function run() {
   console.log('[Seed] 数据库连接成功');
 
   for (const u of DEFAULT_USERS) {
-    const exists = await User.findOne({ where: { email: u.email } });
-    if (exists) {
-      console.log(`[Seed] 已存在，跳过: ${u.email}`);
-      continue;
+    let user = await User.findOne({ where: { email: u.email } });
+
+    if (user) {
+      console.log(`[Seed] 用户已存在，正在将旧 Python 密码更新为 Node.js bcrypt 格式: ${u.email}`);
+    } else {
+      user = User.build({ username: u.username, email: u.username });
+      console.log(`[Seed] 创建新用户: ${u.email}`);
     }
-    const user = User.build({ username: u.username, email: u.email });
+
+    // 这会调用 User 模型里的 setPassword，使用 bcryptjs 生成新哈希
     await user.setPassword(u.password);
     await user.save();
 
-    // 验证密码写入是否正确
     const ok = await user.checkPassword(u.password);
-    console.log(`[Seed] 创建用户: ${u.email}  密码验证: ${ok ? '✅' : '❌'}`);
+    console.log(`[Seed] 状态: ${u.email} 校验: ${ok ? '✅' : '❌'}`);
   }
 
   console.log('[Seed] 完成');
